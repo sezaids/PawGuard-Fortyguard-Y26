@@ -1,0 +1,12 @@
+"use client";
+import Link from "next/link";
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
+import { request } from "../lib/api";
+
+export function AuthForm({ mode }: { mode: "login" | "signup" }) {
+  const router = useRouter(); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
+  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setError(""); const data = new FormData(event.currentTarget); try { await request(`/auth/${mode}`, { method: "POST", body: JSON.stringify({ email: data.get("email"), password: data.get("password") }) }); router.push("/dogs"); } catch (e) { setError(e instanceof Error ? e.message : "Could not continue."); } finally { setBusy(false); } }
+  const isSignup = mode === "signup";
+  return <main className="grid min-h-screen place-items-center bg-sand px-5"><section className="w-full max-w-md rounded-3xl bg-white p-8 shadow-card"><div className="mb-7 flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-mint text-2xl">🐾</span><div><h1 className="text-2xl font-bold">PawGuard</h1><p className="text-sm text-ink/55">Walk smart. Stay cool.</p></div></div><h2 className="text-xl font-bold">{isSignup ? "Create your account" : "Welcome back"}</h2><p className="mt-1 text-sm text-ink/60">{isSignup ? "Start building a safer routine for your dog." : "Sign in to your dog safety dashboard."}</p><form className="mt-6 space-y-4" onSubmit={submit}><label className="block text-sm font-medium">Email<input required name="email" type="email" className="mt-1 w-full rounded-xl border border-ink/15 px-4 py-3 outline-none focus:border-moss" /></label><label className="block text-sm font-medium">Password<input required name="password" type="password" minLength={8} className="mt-1 w-full rounded-xl border border-ink/15 px-4 py-3 outline-none focus:border-moss" /></label>{error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}<button disabled={busy} className="w-full rounded-xl bg-ink px-4 py-3 font-semibold text-white disabled:opacity-50">{busy ? "Please wait…" : isSignup ? "Create account" : "Sign in"}</button></form><p className="mt-5 text-center text-sm text-ink/60">{isSignup ? "Already have an account?" : "New to PawGuard?"} <Link className="font-semibold text-moss" href={isSignup ? "/login" : "/signup"}>{isSignup ? "Sign in" : "Create one"}</Link></p></section></main>;
+}

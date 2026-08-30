@@ -1,0 +1,13 @@
+"use client";
+
+import { FormEvent, useState } from "react";
+import { request } from "../lib/api";
+import { LocationPicker } from "./location-picker";
+import { SurfaceRisk, SurfaceRiskCard } from "./surface-risk-card";
+
+const surfaces = [["asphalt", "Asphalt"], ["concrete", "Concrete"], ["grass", "Grass"], ["sand", "Sand"], ["soil_dirt", "Soil / dirt"]];
+export function SurfaceEstimator({ dogId }: { dogId: string }) {
+  const [risk, setRisk] = useState<SurfaceRisk | null>(null); const [error, setError] = useState(""); const [busy, setBusy] = useState(false); const [latitude, setLatitude] = useState(""); const [longitude, setLongitude] = useState(""); const [surface, setSurface] = useState("asphalt");
+  async function submit(event: FormEvent) { event.preventDefault(); setBusy(true); setError(""); try { setRisk(await request<SurfaceRisk>(`/surface-risk/dogs/${dogId}/current`, { method: "POST", body: JSON.stringify({ surface, latitude: Number(latitude), longitude: Number(longitude), wait_seconds: 20 }) })); } catch (caught) { setError(caught instanceof Error ? caught.message : "Could not calculate the surface estimate."); } finally { setBusy(false); } }
+  return <section className="mt-6 grid gap-6 lg:grid-cols-[.75fr_1.25fr]"><form onSubmit={submit} className="rounded-3xl bg-white p-6 shadow-card"><p className="text-sm font-semibold text-moss">PAW-SURFACE ESTIMATE</p><h2 className="mt-1 text-xl font-bold">Choose a walking surface</h2><p className="mt-2 text-sm leading-6 text-ink/60">A relative estimate, never an exact pavement temperature.</p><div className="mt-5"><select value={surface} onChange={event => setSurface(event.target.value)} className="w-full rounded-xl border border-ink/15 px-3 py-2.5">{surfaces.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div><LocationPicker latitude={latitude} longitude={longitude} onChange={(lat, lon) => { setLatitude(lat); setLongitude(lon); }} /><button disabled={busy} className="mt-5 w-full rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{busy ? "Estimating surface conditions…" : "Check surface risk"}</button>{error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}</form>{risk ? <SurfaceRiskCard risk={risk} /> : <aside className="rounded-3xl border border-dashed border-moss/25 bg-mint/30 p-6"><p className="text-sm font-semibold text-moss">CHECK BEFORE YOU WALK</p><p className="mt-3 text-sm leading-6 text-ink/65">FortyGuard supplies the environmental inputs automatically. Always check the ground yourself.</p></aside>}</section>;
+}

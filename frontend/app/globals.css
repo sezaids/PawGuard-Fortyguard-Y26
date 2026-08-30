@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color: #17312a; background: #fbf8f2; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: #fbf8f2; font-family: Arial, Helvetica, sans-serif; }
+button { font: inherit; }
