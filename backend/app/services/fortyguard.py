@@ -34,14 +34,15 @@ class FortyGuardService:
         source = json.dumps(payload or {}, sort_keys=True, separators=(",", ":"))
         return f"{method}:{path}:{hashlib.sha256(source.encode()).hexdigest()}"
 
-    def _request(self, method: str, path: str, payload: dict[str, Any] | None = None, cache_ttl: int = 0) -> dict[str, Any]:
+    def _request(self, method: str, path: str, payload: dict[str, Any] | None = None, cache_ttl: int = 0, timeout_seconds: float | None = None) -> dict[str, Any]:
         settings = self._settings()
         cache_key = self._cache_key(method, path, payload)
         cached = self._cache.get(cache_key)
         if cached and cached[0] > time.monotonic():
             return cached[1]
         try:
-            with httpx.Client(timeout=httpx.Timeout(settings.fortyguard_timeout_seconds)) as client:
+            timeout = min(settings.fortyguard_timeout_seconds, timeout_seconds) if timeout_seconds is not None else settings.fortyguard_timeout_seconds
+            with httpx.Client(timeout=httpx.Timeout(timeout)) as client:
                 response = client.request(method, f"{self.base_url}{path}", headers={"api-key": settings.fortyguard_api_key}, json=payload)
         except httpx.TimeoutException as error:
             raise FortyGuardError(status_code=504, detail="FortyGuard did not respond before the request timed out. Please try again.") from error
@@ -66,22 +67,25 @@ class FortyGuardService:
             self._cache[cache_key] = (time.monotonic() + cache_ttl, result)
         return result
 
-    def submit_environment(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._request("POST", "/env_params", payload, cache_ttl=60)
+    def submit_environment(self, payload: dict[str, Any], timeout_seconds: float | None = None) -> dict[str, Any]:
+        return self._request("POST", "/env_params", payload, cache_ttl=60, timeout_seconds=timeout_seconds)
 
-    def submit_heatmap(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._request("POST", "/heatmap", payload, cache_ttl=60)
+    def submit_heatmap(self, payload: dict[str, Any], timeout_seconds: float | None = None) -> dict[str, Any]:
+        return self._request("POST", "/heatmap", payload, cache_ttl=60, timeout_seconds=timeout_seconds)
 
-    def status(self, activity_id: str) -> dict[str, Any]:
-        return self._request("GET", f"/status/{activity_id}", cache_ttl=3)
+    def status(self, activity_id: str, timeout_seconds: float | None = None) -> dict[str, Any]:
+        return self._request("GET", f"/status/{activity_id}", cache_ttl=3, timeout_seconds=timeout_seconds)
 
     def wait_for_completion(self, activity_id: str, wait_seconds: int) -> dict[str, Any]:
         """Bounded status polling; terminal Completed and Failed are returned unchanged."""
         deadline = time.monotonic() + wait_seconds
-        result = self.status(activity_id)
+        result = self.status(activity_id, timeout_seconds=max(0.1, deadline - time.monotonic()))
         while result.get("data", {}).get("status") not in {"Completed", "Failed"} and time.monotonic() < deadline:
-            time.sleep(get_settings().fortyguard_poll_seconds)
-            result = self.status(activity_id)
+            remaining = deadline - time.monotonic()
+            time.sleep(min(get_settings().fortyguard_poll_seconds, max(0, remaining)))
+            if time.monotonic() >= deadline:
+                break
+            result = self.status(activity_id, timeout_seconds=max(0.1, deadline - time.monotonic()))
         return result
 
 

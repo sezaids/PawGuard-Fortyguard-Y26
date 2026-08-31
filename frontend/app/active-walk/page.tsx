@@ -5,7 +5,7 @@ import { AuthGate } from "../../components/auth-gate";
 import { LocationPicker } from "../../components/location-picker";
 import { Sidebar } from "../../components/sidebar";
 import { durationWarning, formatElapsed } from "../../lib/active-walk-time";
-import { ActiveWalkStatus, isActiveWalkStatus } from "../../lib/active-walk-status";
+import { ActiveWalkStatus, isActiveWalkStatus, isActiveWalkUnavailableStatus } from "../../lib/active-walk-status";
 import { Dog, request } from "../../lib/api";
 
 const surfaces = [["asphalt", "Asphalt"], ["concrete", "Concrete"], ["grass", "Grass"], ["sand", "Sand"], ["soil_dirt", "Soil / dirt"]];
@@ -63,6 +63,11 @@ export default function ActiveWalkPage() {
           wait_seconds: 20,
         }),
       });
+
+      if (isActiveWalkUnavailableStatus(next)) {
+        setError(next.unavailable_reason);
+        return;
+      }
 
       if (!isActiveWalkStatus(next)) {
         throw new Error(unavailableStatusMessage);

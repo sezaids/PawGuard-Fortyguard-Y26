@@ -1,7 +1,7 @@
 from datetime import time
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.schemas.heat_risk import HeatRiskResponse
 from app.schemas.surface_risk import SurfaceRiskResponse
@@ -16,9 +16,29 @@ class ActiveWalkStatusRequest(BaseModel):
 
 
 class ActiveWalkStatusResponse(BaseModel):
-    heat_risk: HeatRiskResponse
-    surface_risk: SurfaceRiskResponse
-    recommended_duration_minutes: int = Field(ge=0)
+    """A complete live status or an explicit no-live-data result.
+
+    The unavailable shape deliberately contains no substitute weather or risk
+    values. It lets clients keep the walk screen usable when FortyGuard is
+    delayed without presenting an estimate as current.
+    """
+
+    state: Literal["available", "unavailable"] = "available"
+    heat_risk: HeatRiskResponse | None = None
+    surface_risk: SurfaceRiskResponse | None = None
+    recommended_duration_minutes: int | None = Field(default=None, ge=0)
     reminders: list[str]
     caution: str
     disclaimer: str
+    unavailable_reason: str | None = None
+
+    @model_validator(mode="after")
+    def validate_live_status_fields(self) -> "ActiveWalkStatusResponse":
+        live_fields = (self.heat_risk, self.surface_risk, self.recommended_duration_minutes)
+        if self.state == "available" and any(field is None for field in live_fields):
+            raise ValueError("available Active Walk status requires complete risk and duration data")
+        if self.state == "unavailable" and any(field is not None for field in live_fields):
+            raise ValueError("unavailable Active Walk status cannot include live risk or duration data")
+        if self.state == "unavailable" and not self.unavailable_reason:
+            raise ValueError("unavailable Active Walk status requires an unavailable reason")
+        return self

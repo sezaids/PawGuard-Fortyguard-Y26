@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from time import monotonic
 
 from fastapi import HTTPException, status
 
@@ -26,6 +27,14 @@ def current_environment(latitude: float, longitude: float, wait_seconds: int) ->
 
     This avoids asking users for a temperature and never substitutes a made-up value.
     """
+    deadline = monotonic() + wait_seconds
+
+    def remaining_seconds() -> float:
+        remaining = deadline - monotonic()
+        if remaining <= 0:
+            raise HTTPException(status_code=status.HTTP_202_ACCEPTED, detail="FortyGuard is still processing this location. Please retry shortly.")
+        return remaining
+
     now = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
     heatmap = HeatmapRequest(
         polygon_aoi=heatmap_aoi(latitude, longitude),
@@ -33,21 +42,21 @@ def current_environment(latitude: float, longitude: float, wait_seconds: int) ->
         granularity=100,
         analytic_type="tcm",
     )
-    submitted = fortyguard_service.submit_heatmap(heatmap.provider_payload())
+    submitted = fortyguard_service.submit_heatmap(heatmap.provider_payload(), timeout_seconds=remaining_seconds())
     activity_id = submitted.get("data", {}).get("activity_id")
     if not activity_id:
         raise HTTPException(status_code=502, detail="FortyGuard did not accept the current heat request.")
-    heatmap_result = _completed_or_error(fortyguard_service.wait_for_completion(activity_id, wait_seconds), "FortyGuard could not complete the current temperature map.")
+    heatmap_result = _completed_or_error(fortyguard_service.wait_for_completion(activity_id, remaining_seconds()), "FortyGuard could not complete the current temperature map.")
     temperature = forecast_temperature_from_result(heatmap_result)
     if temperature is None:
         raise HTTPException(status_code=502, detail="FortyGuard returned no usable current temperature for this location.")
 
     environmental = CurrentConditionsRequest(latitude=latitude, longitude=longitude).provider_payload(temperature)
-    submitted = fortyguard_service.submit_environment(environmental)
+    submitted = fortyguard_service.submit_environment(environmental, timeout_seconds=remaining_seconds())
     activity_id = submitted.get("data", {}).get("activity_id")
     if not activity_id:
         raise HTTPException(status_code=502, detail="FortyGuard did not accept the environmental request.")
-    result = _completed_or_error(fortyguard_service.wait_for_completion(activity_id, wait_seconds), "FortyGuard could not complete the current environmental analysis.")
+    result = _completed_or_error(fortyguard_service.wait_for_completion(activity_id, remaining_seconds()), "FortyGuard could not complete the current environmental analysis.")
     environment = extract_environment(result, temperature)
     if environment.get("temperature_celsius") is None:
         raise HTTPException(status_code=502, detail="FortyGuard returned incomplete current environmental data.")
