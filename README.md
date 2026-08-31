@@ -15,6 +15,10 @@
 
 [Watch the demo](https://www.youtube.com/watch?v=OdeQ1cFPH60&t=36s)
 
+## Temporary Crendentials
+Email: temp@temp.com
+Password: Temp@1234
+
 ## Problem
 
 Warm-weather walks are not one-size-fits-all. A dog’s coat, size, age, fitness, activity level, and breathing anatomy can all matter, while outdoor conditions and surface exposure can change quickly. Dog owners need practical planning support without false precision or medical claims.
