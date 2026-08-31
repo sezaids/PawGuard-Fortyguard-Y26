@@ -16,7 +16,7 @@
 [Watch the demo](https://www.youtube.com/watch?v=OdeQ1cFPH60&t=36s)
 
 ## Temporary Crendentials
-Email: temp@temp.com
+Email: temp@temp.com\n
 Password: Temp@1234
 
 ## Problem
