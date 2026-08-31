@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, datetime, timedelta
 from threading import Lock, Thread
 from time import perf_counter
@@ -13,7 +14,7 @@ from app.db.session import get_db
 from app.schemas.fortyguard import DateTimeFilter, HeatmapRequest
 from app.schemas.walk_planner import WalkPlanRequest, WalkPlanResponse
 from app.services.fortyguard import FortyGuardError, fortyguard_service
-from app.services.walk_planner import forecast_temperature_from_result, rank_walk_windows
+from app.services.walk_planner import forecast_result_diagnostics, forecast_temperature_from_result, rank_walk_windows
 
 router = APIRouter()
 DbSession = Annotated[Session, Depends(get_db)]
@@ -22,6 +23,7 @@ DbSession = Annotated[Session, Depends(get_db)]
 # It contains no secret and every poll is re-authorized against the signed-in user.
 _forecast_analyses: dict[str, dict] = {}
 _forecast_lock = Lock()
+logger = logging.getLogger(__name__)
 
 
 def small_square_aoi(latitude: float, longitude: float) -> dict:
@@ -158,6 +160,11 @@ def poll_forecast_analysis(analysis_id: str, current_user: CurrentUser, db: DbSe
         if temperature is not None:
             intervals.append({"time": job["time"], "temperature_celsius": temperature})
     if not intervals:
+        completed_results = [job["result"] for job in analysis["jobs"] if job["terminal"] == "completed"]
+        logger.warning(
+            "FortyGuard Walk Planner completed without forecast temperatures; schema=%s",
+            forecast_result_diagnostics(completed_results[0]) if completed_results else {},
+        )
         _set_failed(analysis_id, "FortyGuard completed without usable forecast data for this location.")
         return {"state": "failed", "analysis_id": analysis_id, "stage": "no_data", "message": "FortyGuard completed without usable forecast data for this location."}
 

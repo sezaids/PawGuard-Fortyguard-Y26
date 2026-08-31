@@ -21,8 +21,8 @@ def test_daily_schedule_analysis_reuses_jobs_across_polls(monkeypatch):
     monkeypatch.setattr(daily_scheduler.fortyguard_service, "submit_heatmap", lambda *_: submitted.append(1) or {"data": {"activity_id": f"job-{len(submitted)}"}})
     statuses = iter([
         {"data": {"status": "Processing"}},
-        {"data": {"status": "Completed", "result": {"stats_data": {"Temperature_stats": {"Mean": 20}}}}},
-        {"data": {"status": "Completed", "result": {"map_data": {"type": "FeatureCollection", "features": [{"properties": {"temperature": 21}}]}}}},
+        {"data": {"status": "Completed", "result": {"stats_data": {"temperature_stats": {"mean": 20}}}}},
+        {"data": {"status": "Completed", "result": {"map_data": {"type": "FeatureCollection", "features": [{"properties": {"average_temperature": 21}}]}}}},
     ])
     monkeypatch.setattr(daily_scheduler.fortyguard_service, "status", lambda *_, **__: next(statuses))
     monkeypatch.setattr(daily_scheduler, "build_daily_schedule", lambda dogs, intervals, availability, surface: {"scheduled": [], "unscheduled": [], "message": "Ready", "disclaimer": "Planning guidance only."})

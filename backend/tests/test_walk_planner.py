@@ -1,7 +1,7 @@
 from datetime import date, datetime, timezone
 from types import SimpleNamespace
 
-from app.services.walk_planner import forecast_temperature_from_result, rank_walk_windows
+from app.services.walk_planner import forecast_result_diagnostics, forecast_temperature_from_result, rank_walk_windows
 
 
 def dog(**overrides):
@@ -41,3 +41,31 @@ def test_heatmap_temperature_uses_real_temperature_tiles_when_stats_are_absent()
         {"properties": {"Temperature": 30}},
     ]}}
     assert forecast_temperature_from_result(result) == 29
+
+
+def test_heatmap_temperature_normalizes_confirmed_completed_provider_shape():
+    # Sanitized structure from a completed FortyGuard heatmap activity. Values
+    # are fixtures only; production values are never logged or manufactured.
+    activity = {
+        "data": {
+            "status": "Completed",
+            "result": {
+                "stats_data": {"temperature_stats": {"minimum": 18.0, "maximum": 24.0, "mean": 21.5, "standard_deviation": 1.2}},
+                "map_data": {"type": "FeatureCollection", "features": [
+                    {"type": "Feature", "properties": {"tile_id": 1, "average_temperature": 21.5, "min_temperature": 18.0, "max_temperature": 24.0}}
+                ]},
+            },
+        }
+    }
+    assert forecast_temperature_from_result(activity) == 21.5
+    diagnostics = forecast_result_diagnostics(activity)
+    assert diagnostics["stats_keys"] == ["temperature_stats"]
+    assert diagnostics["first_feature_property_keys"] == ["average_temperature", "max_temperature", "min_temperature", "tile_id"]
+
+
+def test_heatmap_temperature_uses_confirmed_average_temperature_tile_name():
+    activity = {"data": {"result": {"map_data": {"features": [
+        {"properties": {"average_temperature": 20.0}},
+        {"properties": {"average_temperature": 22.0}},
+    ]}}}}
+    assert forecast_temperature_from_result(activity) == 21.0

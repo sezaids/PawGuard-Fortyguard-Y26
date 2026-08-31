@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, datetime, timedelta
 from threading import Lock, Thread
 from time import perf_counter
@@ -17,13 +18,14 @@ from app.schemas.daily_scheduler import DailyScheduleRequest, DailyScheduleRespo
 from app.schemas.fortyguard import DateTimeFilter, HeatmapRequest
 from app.services.daily_scheduler import build_daily_schedule
 from app.services.fortyguard import FortyGuardError, fortyguard_service
-from app.services.walk_planner import forecast_temperature_from_result
+from app.services.walk_planner import forecast_result_diagnostics, forecast_temperature_from_result
 
 router = APIRouter()
 DbSession = Annotated[Session, Depends(get_db)]
 _SCHEDULE_TIMEOUT_SECONDS = 120
 _schedule_analyses: dict[str, dict] = {}
 _schedule_lock = Lock()
+logger = logging.getLogger(__name__)
 
 
 def _schedule_inputs(payload: DailyScheduleRequest, current_user: CurrentUser, db: Session) -> tuple[list[Dog], list[tuple[datetime, datetime]], list[datetime]]:
@@ -158,6 +160,8 @@ def poll_daily_schedule_analysis(analysis_id: str, current_user: CurrentUser, db
         if temperature is not None:
             intervals.append({"time": job["time"], "temperature_celsius": temperature})
     if not intervals:
+        completed_results = [job["result"] for job in analysis["jobs"] if job["terminal"] == "completed"]
+        logger.warning("FortyGuard Daily Scheduler completed without forecast temperatures; schema=%s", forecast_result_diagnostics(completed_results[0]) if completed_results else {})
         _set_failed(analysis_id, "FortyGuard completed without usable forecast data for this location.")
         return {"state": "failed", "analysis_id": analysis_id, "stage": "no_data", "message": "FortyGuard completed without usable forecast data for this location."}
 

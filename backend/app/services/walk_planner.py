@@ -10,13 +10,49 @@ from app.services.heat_risk import calculate_heat_risk
 from app.services.surface_risk import calculate_surface_risk
 
 
-def forecast_temperature_from_result(result: dict[str, Any]) -> float | None:
-    """Extract only provider-returned heatmap temperature summaries or tiles.
+def _forecast_result(result: dict[str, Any]) -> dict[str, Any]:
+    """Return the completed result whether callers pass an activity or result.
 
-    FortyGuard completed results have appeared with different key casing and
-    either aggregate stats or GeoJSON feature properties. This accepts those
-    documented temperature representations without creating a value when none
-    is present.
+    FortyGuard status responses wrap the completed GeoJSON and statistics at
+    ``data.result``. Keeping that unwrapping here makes all forecast consumers
+    use the same provider adapter and avoids route-specific schema assumptions.
+    """
+    data = result.get("data")
+    if isinstance(data, dict) and isinstance(data.get("result"), dict):
+        return data["result"]
+    nested = result.get("result")
+    return nested if isinstance(nested, dict) else result
+
+
+def forecast_result_diagnostics(result: dict[str, Any]) -> dict[str, Any]:
+    """Return secret- and value-free schema diagnostics for provider support."""
+    normalized = _forecast_result(result)
+    stats = normalized.get("stats_data")
+    map_data = normalized.get("map_data")
+    features = map_data.get("features") if isinstance(map_data, dict) else None
+    first_properties = None
+    if isinstance(features, list) and features and isinstance(features[0], dict):
+        properties = features[0].get("properties")
+        if isinstance(properties, dict):
+            first_properties = sorted(str(key) for key in properties)
+    return {
+        "result_keys": sorted(str(key) for key in normalized),
+        "stats_type": type(stats).__name__,
+        "stats_keys": sorted(str(key) for key in stats) if isinstance(stats, dict) else [],
+        "map_type": type(map_data).__name__,
+        "feature_count": len(features) if isinstance(features, list) else None,
+        "first_feature_property_keys": first_properties or [],
+    }
+
+
+def forecast_temperature_from_result(result: dict[str, Any]) -> float | None:
+    """Extract a real FortyGuard forecast heatmap temperature estimate.
+
+    Confirmed completed activities provide ``data.result.stats_data`` with
+    ``temperature_stats.mean`` and GeoJSON tile properties named
+    ``average_temperature``, ``min_temperature``, and ``max_temperature``.
+    The mean is preferred; a mean of the provider's
+    per-tile averages is used only when the aggregate statistic is absent.
     """
 
     def numeric(value: Any) -> float | None:
@@ -25,7 +61,8 @@ def forecast_temperature_from_result(result: dict[str, Any]) -> float | None:
         except (TypeError, ValueError):
             return None
 
-    stats = result.get("stats_data")
+    normalized = _forecast_result(result)
+    stats = normalized.get("stats_data")
     if isinstance(stats, dict):
         for stats_key in ("Temperature_stats", "temperature_stats", "Temperature", "temperature"):
             group = stats.get(stats_key)
@@ -36,7 +73,7 @@ def forecast_temperature_from_result(result: dict[str, Any]) -> float | None:
                 if value is not None:
                     return value
 
-    map_data = result.get("map_data")
+    map_data = normalized.get("map_data")
     features = map_data.get("features") if isinstance(map_data, dict) else None
     values: list[float] = []
     if isinstance(features, list):
@@ -44,7 +81,13 @@ def forecast_temperature_from_result(result: dict[str, Any]) -> float | None:
             properties = feature.get("properties") if isinstance(feature, dict) else None
             if not isinstance(properties, dict):
                 continue
-            for key in ("temperature", "Temperature", "temperature_celsius", "Temperature_celsius"):
+            for key in (
+                "average_temperature",
+                "temperature",
+                "Temperature",
+                "temperature_celsius",
+                "Temperature_celsius",
+            ):
                 value = numeric(properties.get(key))
                 if value is not None:
                     values.append(value)
