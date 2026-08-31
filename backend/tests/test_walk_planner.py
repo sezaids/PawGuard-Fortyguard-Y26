@@ -2,6 +2,7 @@ from datetime import date, datetime, timezone
 from types import SimpleNamespace
 
 from app.services.walk_planner import forecast_result_diagnostics, forecast_temperature_from_result, rank_walk_windows
+from app.api.routes.walk_planner import small_square_aoi
 
 
 def dog(**overrides):
@@ -74,3 +75,10 @@ def test_heatmap_temperature_uses_confirmed_average_temperature_tile_name():
 def test_heatmap_temperature_accepts_async_route_completed_data_envelope():
     completed_data = {"status": "Completed", "result": {"stats_data": {"temperature_stats": {"mean": 19.5}}}}
     assert forecast_temperature_from_result(completed_data) == 19.5
+
+
+def test_forecast_aoi_uses_heatmap_tile_footprint_not_empty_small_cell_area():
+    aoi = small_square_aoi(34.0522, -118.2437)
+    ring = aoi["features"][0]["geometry"]["coordinates"][0]
+    assert abs((ring[1][0] - ring[0][0]) - 0.012) < 1e-9
+    assert abs((ring[2][1] - ring[1][1]) - 0.012) < 1e-9

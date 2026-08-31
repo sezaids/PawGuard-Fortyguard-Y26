@@ -14,6 +14,7 @@ from app.db.session import get_db
 from app.schemas.fortyguard import DateTimeFilter, HeatmapRequest
 from app.schemas.walk_planner import WalkPlanRequest, WalkPlanResponse
 from app.services.fortyguard import FortyGuardError, fortyguard_service
+from app.services.heatmap_aoi import heatmap_aoi
 from app.services.walk_planner import forecast_result_diagnostics, forecast_temperature_from_result, rank_walk_windows
 
 router = APIRouter()
@@ -27,9 +28,14 @@ logger = logging.getLogger(__name__)
 
 
 def small_square_aoi(latitude: float, longitude: float) -> dict:
-    """A small closed GeoJSON polygon around the selected point for a heatmap request."""
-    delta = 0.002
-    return {"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {}, "geometry": {"type": "Polygon", "coordinates": [[[longitude - delta, latitude - delta], [longitude + delta, latitude - delta], [longitude + delta, latitude + delta], [longitude - delta, latitude + delta], [longitude - delta, latitude - delta]]]}}]}
+    """Return an AOI large enough for FortyGuard to generate real tiles.
+
+    Production completed activities for a 0.002° square returned ``n_cells``
+    metadata and an empty GeoJSON feature list. Use the existing 0.006°
+    heatmap AOI shared by the working Heat Map flow so completed forecast jobs
+    contain provider tiles or aggregate statistics to normalize.
+    """
+    return heatmap_aoi(latitude, longitude)
 
 
 def _set_failed(analysis_id: str, message: str) -> None:
