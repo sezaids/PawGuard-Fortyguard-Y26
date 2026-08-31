@@ -5,7 +5,7 @@ import { AuthGate } from "../../components/auth-gate";
 import { Sidebar } from "../../components/sidebar";
 import { request } from "../../lib/api";
 
-type Walk = { id: string; dog_name: string; completed_at: string; duration_minutes: number; surface: string; heat_risk_score: number | null; heat_risk_status: string | null; surface_risk_score: number | null; surface_risk_status: string | null; route_distance_meters: number | null };
+type Walk = { id: string; dog_name: string; completed_at: string; duration_minutes: number; surface: string; heat_risk_score: number | null; heat_risk_status: string | null; surface_risk_score: number | null; surface_risk_status: string | null; route_distance_meters: number | null; route_metadata: { source?: string } | null };
 type Summary = { total_walks: number; total_minutes: number; average_duration_minutes: number; latest_walk: Walk | null; latest_heat_risk_status: string | null; message: string };
 const displaySurface = (surface: string) => surface.replace("_", " / ");
 

@@ -164,6 +164,25 @@ Without live conditions, it returns concise, dog-specific **Profile-based guidan
 
 ### Environment Variables
 
+### Optional demo seed
+
+PawGuard never creates demo content during application startup. To initialize the
+single designated hackathon demo account after migrations, configure these
+values only in the deployment environment, then run the command once:
+
+```bash
+DEMO_SEED_ENABLED=true
+DEMO_ACCOUNT_EMAIL=demo-account-email@example.com
+DEMO_ACCOUNT_PASSWORD=use-a-strong-demo-password
+python -m app.db.seed_demo
+```
+
+The command is idempotent: it creates only missing Max, Bruno, Luna, Bella,
+and Coco profiles plus six clearly marked sample saved walks for that account.
+It does not call FortyGuard or create current conditions. Remove the three
+temporary seed variables after initialization; the demo account continues to
+work normally.
+
 Copy the template before starting. Use your own values; do not commit the resulting `.env` file.
 
 ```bash
