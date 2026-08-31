@@ -29,3 +29,15 @@ def test_no_safe_window_explains_unavailability():
 
 def test_heatmap_temperature_statistic_is_read():
     assert forecast_temperature_from_result({"stats_data": {"Temperature_stats": {"Mean": 28.4}}}) == 28.4
+
+
+def test_heatmap_temperature_accepts_provider_casing_variants():
+    assert forecast_temperature_from_result({"stats_data": {"temperature": {"average": "28.4"}}}) == 28.4
+
+
+def test_heatmap_temperature_uses_real_temperature_tiles_when_stats_are_absent():
+    result = {"map_data": {"type": "FeatureCollection", "features": [
+        {"properties": {"temperature": 28}},
+        {"properties": {"Temperature": 30}},
+    ]}}
+    assert forecast_temperature_from_result(result) == 29

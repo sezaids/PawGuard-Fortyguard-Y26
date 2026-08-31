@@ -11,14 +11,45 @@ from app.services.surface_risk import calculate_surface_risk
 
 
 def forecast_temperature_from_result(result: dict[str, Any]) -> float | None:
-    """Read the documented heatmap result.stats_data.Temperature_stats mean field."""
-    stats = result.get("stats_data") or {}
-    temperature_stats = stats.get("Temperature_stats") or stats.get("temperature_stats") or {}
-    value = temperature_stats.get("Mean", temperature_stats.get("mean"))
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
+    """Extract only provider-returned heatmap temperature summaries or tiles.
+
+    FortyGuard completed results have appeared with different key casing and
+    either aggregate stats or GeoJSON feature properties. This accepts those
+    documented temperature representations without creating a value when none
+    is present.
+    """
+
+    def numeric(value: Any) -> float | None:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    stats = result.get("stats_data")
+    if isinstance(stats, dict):
+        for stats_key in ("Temperature_stats", "temperature_stats", "Temperature", "temperature"):
+            group = stats.get(stats_key)
+            if not isinstance(group, dict):
+                continue
+            for value_key in ("Mean", "mean", "Average", "average"):
+                value = numeric(group.get(value_key))
+                if value is not None:
+                    return value
+
+    map_data = result.get("map_data")
+    features = map_data.get("features") if isinstance(map_data, dict) else None
+    values: list[float] = []
+    if isinstance(features, list):
+        for feature in features:
+            properties = feature.get("properties") if isinstance(feature, dict) else None
+            if not isinstance(properties, dict):
+                continue
+            for key in ("temperature", "Temperature", "temperature_celsius", "Temperature_celsius"):
+                value = numeric(properties.get(key))
+                if value is not None:
+                    values.append(value)
+                    break
+    return sum(values) / len(values) if values else None
 
 
 def recommended_walk_duration(dog: Dog, combined_score: int, rules: WalkPlannerRules = WALK_PLANNER_RULES, today: date | None = None) -> int:
