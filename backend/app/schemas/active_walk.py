@@ -3,6 +3,9 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.schemas.heat_risk import HeatRiskResponse
+from app.schemas.surface_risk import SurfaceRiskResponse
+
 
 class ActiveWalkStatusRequest(BaseModel):
     latitude: float = Field(ge=-90, le=90)
@@ -13,8 +16,8 @@ class ActiveWalkStatusRequest(BaseModel):
 
 
 class ActiveWalkStatusResponse(BaseModel):
-    heat_risk: dict
-    surface_risk: dict
+    heat_risk: HeatRiskResponse
+    surface_risk: SurfaceRiskResponse
     recommended_duration_minutes: int = Field(ge=0)
     reminders: list[str]
     caution: str

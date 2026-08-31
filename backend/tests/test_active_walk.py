@@ -2,6 +2,7 @@ from datetime import date, time
 from types import SimpleNamespace
 
 from app.services.active_walk import active_walk_summary
+from app.schemas.active_walk import ActiveWalkStatusResponse
 
 
 def dog(**overrides):
@@ -11,9 +12,11 @@ def dog(**overrides):
 
 def test_active_walk_returns_shared_risk_engines_and_duration_limit():
     result = active_walk_summary(dog(), {"temperature_celsius": 22, "apparent_temperature_celsius": 22, "relative_humidity_percent": 45, "solar_ghi_wm2": 100}, "grass", time(8), today=date(2026, 8, 30))
+    response = ActiveWalkStatusResponse.model_validate(result)
     assert result["recommended_duration_minutes"] > 0
     assert result["heat_risk"]["status"] in {"Low", "Moderate"}
     assert result["surface_risk"]["level"] == "Low"
+    assert response.heat_risk.score == result["heat_risk"]["score"]
 
 
 def test_active_walk_high_risk_tells_user_to_end_outdoor_walk():
