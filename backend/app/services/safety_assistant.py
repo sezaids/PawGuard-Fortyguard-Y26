@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import re
 from typing import Any
 
 import httpx
@@ -25,6 +26,41 @@ def is_multi_dog_question(question: str) -> bool:
 
     normalized = " ".join(question.lower().split())
     return any(phrase in normalized for phrase in _MULTI_DOG_PHRASES)
+
+
+def resolve_named_dogs(question: str, dogs: list[Any]) -> tuple[list[Any], list[str], bool]:
+    """Resolve explicitly requested profile names without guessing missing dogs.
+
+    Known names are matched case-insensitively. Comparison lists such as
+    ``from Bella and Luna`` are also parsed so a missing requested dog is
+    reported instead of silently widening the comparison to the full pack.
+    """
+
+    normalized_question = " ".join(question.lower().split())
+    selected = [dog for dog in dogs if re.search(rf"(?<!\w){re.escape(dog.name.strip().lower())}(?!\w)", normalized_question)]
+    selected.sort(key=lambda dog: normalized_question.index(dog.name.strip().lower()))
+
+    candidates: list[str] = []
+    for match in re.finditer(r"\b(?:from|between|among)\s+([^?.!]+)", normalized_question):
+        segment = re.split(r"\b(?:please|why|now|and\s+(?:give|tell|explain))\b", match.group(1))[0]
+        candidates.extend(part.strip(" ,") for part in re.split(r"\s*(?:,|\band\b|\bor\b|\bvs\.?\b|\bversus\b)\s*", segment) if part.strip(" ,"))
+
+    # Covers a direct one-dog request such as "Can I walk Ghost now?".
+    direct = re.search(r"\b(?:walk|about)\s+([a-z][a-z' -]*)\b", normalized_question)
+    if direct:
+        candidate = direct.group(1).strip()
+        if candidate not in {"now", "my dog", "a dog", "the dog"}:
+            candidates.append(re.split(r"\b(?:now|today|please|and)\b", candidate)[0].strip())
+
+    known_names = {dog.name.strip().lower() for dog in dogs}
+    unknown = [candidate for candidate in candidates if candidate and candidate not in known_names]
+    has_explicit_name = bool(selected or candidates)
+    return selected, list(dict.fromkeys(unknown)), has_explicit_name
+
+
+def unknown_dog_answer(names: list[str]) -> str:
+    requested = ", ".join(name.title() for name in names)
+    return f"I could not find a saved dog profile named {requested}. Please check the name and try again; PawGuard did not substitute another dog."
 
 
 def ask_safety_assistant(question: str, context: dict[str, Any]) -> str:

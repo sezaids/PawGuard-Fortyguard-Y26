@@ -2,7 +2,12 @@ from datetime import date
 from types import SimpleNamespace
 from uuid import uuid4
 
-from app.services.safety_assistant import base_context, live_multi_dog_answer, profile_guidance_answer
+from app.services.safety_assistant import base_context, live_multi_dog_answer, profile_guidance_answer, resolve_named_dogs, unknown_dog_answer
+
+
+def dog(name: str, **overrides):
+    defaults = dict(id=uuid4(), name=name, body_size="medium", coat_color="cream", coat_length="short", brachycephalic=False, activity_level="low", fitness_level="high", weight_kg=16, date_of_birth=date(2022, 1, 1))
+    return SimpleNamespace(**(defaults | overrides))
 
 
 def test_assistant_context_excludes_account_email_and_notes():
@@ -54,3 +59,42 @@ def test_live_multi_dog_answer_preserves_walk_match_ranking_and_avoidance():
 
 def test_live_multi_dog_answer_handles_an_empty_pack():
     assert "Add dog profiles" in live_multi_dog_answer(None)
+
+
+def test_named_pair_limits_comparison_to_bella_and_luna_case_insensitively():
+    dogs = [dog("Max"), dog("Bella"), dog("Luna"), dog("Bruno")]
+
+    selected, unknown, explicit = resolve_named_dogs("Which dog should I walk now from bella and LUNA?", dogs)
+
+    assert explicit is True
+    assert unknown == []
+    assert [item.name for item in selected] == ["Bella", "Luna"]
+
+
+def test_one_named_dog_selects_only_that_dog():
+    dogs = [dog("Max"), dog("Bella"), dog("Luna")]
+
+    selected, unknown, explicit = resolve_named_dogs("Can I walk Luna now?", dogs)
+
+    assert explicit is True
+    assert unknown == []
+    assert [item.name for item in selected] == ["Luna"]
+
+
+def test_no_named_dog_leaves_the_full_pack_available():
+    dogs = [dog("Max"), dog("Bella"), dog("Luna")]
+
+    selected, unknown, explicit = resolve_named_dogs("Which of my dogs should I walk now?", dogs)
+
+    assert selected == []
+    assert unknown == []
+    assert explicit is False
+
+
+def test_unknown_requested_dog_is_reported_without_substitution():
+    selected, unknown, explicit = resolve_named_dogs("Can I walk Ghost now?", [dog("Bella"), dog("Luna")])
+
+    assert selected == []
+    assert explicit is True
+    assert unknown == ["ghost"]
+    assert "Ghost" in unknown_dog_answer(unknown)
