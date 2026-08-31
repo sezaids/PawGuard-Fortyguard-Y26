@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser
@@ -31,7 +32,12 @@ def signup(payload: UserCreate, response: Response, db: DbSession) -> User:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="An account with this email already exists")
     user = User(email=email, password_hash=hash_password(payload.password))
     db.add(user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as error:
+        # Preserve the same safe response if two signup requests race each other.
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="An account with this email already exists") from error
     db.refresh(user)
     set_session_cookie(response, user)
     return user

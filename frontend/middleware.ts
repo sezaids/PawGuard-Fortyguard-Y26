@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { middlewareApiEndpoint } from "./lib/api-url";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const PUBLIC_PATHS = new Set(["/login", "/signup"]);
@@ -8,6 +9,12 @@ const PUBLIC_PATHS = new Set(["/login", "/signup"]);
  * session check. The API remains the source of truth for the session.
  */
 export async function middleware(request: NextRequest) {
+  // `/backend/*` is the Vercel-to-Cloud-Run proxy. It must never be treated as
+  // a protected Next.js page: doing so redirects POST signup/login requests to
+  // `/login`, which turns them into the observed 405 response.
+  if (request.nextUrl.pathname === "/backend" || request.nextUrl.pathname.startsWith("/backend/")) {
+    return NextResponse.next();
+  }
   if (PUBLIC_PATHS.has(request.nextUrl.pathname)) {
     return NextResponse.next();
   }
@@ -18,7 +25,7 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    const response = await fetch(`${API_URL}/api/v1/auth/me`, {
+    const response = await fetch(middlewareApiEndpoint(API_URL, request.url), {
       headers: { cookie: `pawguard_session=${session.value}` },
       cache: "no-store",
       signal: AbortSignal.timeout(5_000),
@@ -38,5 +45,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!backend(?:/|$)|_next/static|_next/image|favicon.ico).*)"],
 };

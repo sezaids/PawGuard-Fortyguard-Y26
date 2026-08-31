@@ -68,6 +68,18 @@ PawGuard uses server-issued, HTTP-only session cookies. The backend hashes passw
 
 Set `COOKIE_SECURE=true` in deployed HTTPS environments and generate a unique, high-entropy `SECRET_KEY`. The `backend/alembic` revision directory holds the required schema migration.
 
+## Production deployment: Vercel + Cloud Run
+
+The frontend is designed to call the same-origin `/backend` proxy in production. Browser code must **not** use the Cloud Run `run.app` URL directly.
+
+1. Configure the Vercel project with `frontend` as its Root Directory. The [vercel.json](frontend/vercel.json) rewrite forwards `/backend/:path*` to Cloud Run without changing the browser URL.
+2. Set Vercel Production `NEXT_PUBLIC_API_URL=/backend`, then redeploy the frontend. Do not add a trailing `/api/v1`; PawGuard appends it exactly once.
+3. Deploy the backend from `backend` using its Dockerfile. Cloud Run supplies `PORT`; no port is hardcoded for production.
+4. Set these Cloud Run environment variables securely: `DATABASE_URL`, `SECRET_KEY`, `COOKIE_SECURE=true`, `CORS_ORIGINS=https://<your-vercel-domain>`, plus provider keys as required. `BACKEND_CORS_ORIGINS` is accepted for compatibility, but `CORS_ORIGINS` is preferred.
+5. Run `alembic upgrade head` against the production PostgreSQL/Supabase database before accepting signups. Standard Supabase `postgresql://` and legacy `postgres://` URLs are normalized to the installed Psycopg v3 driver.
+
+Because the Vercel rewrite is same-origin, browser requests include the HTTP-only session cookie without relying on cross-origin cookie behavior. Keep the Cloud Run service reachable by Vercel; end-user networks do not need direct access to its `run.app` URL.
+
 ## FortyGuard integration
 
 PawGuard calls FortyGuard only from FastAPI; the API key is never sent to the browser. Add your credential to the root `.env`:

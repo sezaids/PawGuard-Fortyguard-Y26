@@ -1,7 +1,5 @@
 # Environment files
-.env
-.env.local
-.env.*.local
+.env*
 !.env.example
 
 # JavaScript
@@ -19,6 +17,7 @@ frontend/coverage/
 backend/.venv/
 backend/venv/
 backend/__pycache__/
+**/__pycache__/
 backend/**/*.py[cod]
 backend/.pytest_cache/
 backend/.mypy_cache/
