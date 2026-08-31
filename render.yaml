@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: pawguard-fortyguard-y26-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    # A failed schema upgrade cancels the rollout rather than serving a
+    # revision with an incompatible database schema.
+    preDeployCommand: alembic upgrade head
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health/
+    autoDeployTrigger: commit
+    buildFilter:
+      paths:
+        - backend/**
+        - render.yaml
+      ignoredPaths: []
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: CORS_ORIGINS
+        value: https://paw-guard-fortyguard-y26.vercel.app
+      - key: FORTYGUARD_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
