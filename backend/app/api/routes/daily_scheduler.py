@@ -139,7 +139,10 @@ def poll_daily_schedule_analysis(analysis_id: str, current_user: CurrentUser, db
             provider = fortyguard_service.status(job["activity_id"], timeout_seconds=8)
             data = provider.get("data", {})
             if data.get("status") == "Completed":
-                job.update({"terminal": "completed", "result": data.get("result") or {}})
+                # Retain the complete provider data envelope for the shared
+                # forecast adapter instead of assuming result is the only
+                # possible completed-result container.
+                job.update({"terminal": "completed", "result": data})
             elif data.get("status") == "Failed":
                 job["terminal"] = "failed"
     except FortyGuardError as error:

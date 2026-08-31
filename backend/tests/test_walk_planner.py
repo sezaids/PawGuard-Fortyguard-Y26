@@ -69,3 +69,8 @@ def test_heatmap_temperature_uses_confirmed_average_temperature_tile_name():
         {"properties": {"average_temperature": 22.0}},
     ]}}}}
     assert forecast_temperature_from_result(activity) == 21.0
+
+
+def test_heatmap_temperature_accepts_async_route_completed_data_envelope():
+    completed_data = {"status": "Completed", "result": {"stats_data": {"temperature_stats": {"mean": 19.5}}}}
+    assert forecast_temperature_from_result(completed_data) == 19.5

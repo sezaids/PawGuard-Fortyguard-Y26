@@ -136,7 +136,10 @@ def poll_forecast_analysis(analysis_id: str, current_user: CurrentUser, db: DbSe
             provider_status = provider_data.get("status")
             if provider_status == "Completed":
                 job["terminal"] = "completed"
-                job["result"] = provider_data.get("result") or {}
+                # Preserve the completed envelope. The shared adapter accepts
+                # both data.result and result shapes, so this never discards a
+                # provider field that may be nested differently by an activity.
+                job["result"] = provider_data
             elif provider_status == "Failed":
                 job["terminal"] = "failed"
     except FortyGuardError as error:
