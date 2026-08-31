@@ -5,10 +5,9 @@ services:
     plan: free
     rootDir: backend
     buildCommand: pip install -r requirements.txt
-    # A failed schema upgrade cancels the rollout rather than serving a
-    # revision with an incompatible database schema.
-    preDeployCommand: alembic upgrade head
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    # Render Free does not support preDeployCommand. The shell short-circuits,
+    # so Uvicorn starts only after the schema is successfully upgraded.
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/v1/health/
     autoDeployTrigger: commit
     buildFilter:
