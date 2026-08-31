@@ -65,3 +65,42 @@ def test_active_walk_converts_provider_delay_or_failure_to_no_live_data(monkeypa
     assert response["unavailable_reason"] == detail
     assert response["heat_risk"] is None
     assert received_wait_seconds == [8]
+
+
+def test_active_walk_analysis_polls_existing_provider_jobs_without_duplicates(monkeypatch):
+    active_walk._active_walk_analyses.clear()
+    owner_id = uuid4()
+    submitted = []
+    monkeypatch.setattr(active_walk, "owned_dog", lambda *_: dog())
+    monkeypatch.setattr(active_walk.fortyguard_service, "submit_heatmap", lambda *_, **__: submitted.append("heatmap") or {"data": {"activity_id": "heat-job"}})
+    monkeypatch.setattr(active_walk.fortyguard_service, "submit_environment", lambda *_, **__: submitted.append("environment") or {"data": {"activity_id": "environment-job"}})
+    provider_results = iter([
+        {"data": {"status": "Processing"}},
+        {"data": {"status": "Completed", "result": {"stats_data": {"Temperature_stats": {"Mean": 28.5}}}}},
+        {"data": {"status": "Completed", "result": {"locations": [{"temperature": 28.5, "parameters": {"apparent_temperature_celsius": [30], "relative_humidity_percent": [55]}, "solar_irradiance": {"clear_sky": {"ghi": 400}}}]}}},
+    ])
+    monkeypatch.setattr(active_walk.fortyguard_service, "status", lambda *_, **__: next(provider_results))
+    request = ActiveWalkStatusRequest(latitude=44.7973, longitude=-106.9562, surface="grass")
+    user = SimpleNamespace(id=owner_id)
+    started = active_walk.start_active_walk_analysis(uuid4(), request, user, SimpleNamespace())
+    assert started["state"] == "processing"
+    analysis_id = started["analysis_id"]
+    assert active_walk.poll_active_walk_analysis(analysis_id, user, SimpleNamespace())["stage"] == "heatmap"
+    assert active_walk.poll_active_walk_analysis(analysis_id, user, SimpleNamespace())["stage"] == "environment"
+    completed = active_walk.poll_active_walk_analysis(analysis_id, user, SimpleNamespace())
+    assert completed["state"] == "completed"
+    assert completed["result"]["state"] == "available"
+    assert completed["result"]["heat_risk"]["score"] >= 0
+    assert submitted == ["heatmap", "environment"]
+
+
+def test_active_walk_analysis_reports_provider_failure_without_a_risk_estimate(monkeypatch):
+    active_walk._active_walk_analyses.clear()
+    owner_id = uuid4()
+    monkeypatch.setattr(active_walk, "owned_dog", lambda *_: dog())
+    monkeypatch.setattr(active_walk.fortyguard_service, "submit_heatmap", lambda *_, **__: {"data": {"activity_id": "heat-job"}})
+    monkeypatch.setattr(active_walk.fortyguard_service, "status", lambda *_, **__: {"data": {"status": "Failed"}})
+    started = active_walk.start_active_walk_analysis(uuid4(), ActiveWalkStatusRequest(latitude=44.7973, longitude=-106.9562, surface="grass"), SimpleNamespace(id=owner_id), SimpleNamespace())
+    unavailable = active_walk.poll_active_walk_analysis(started["analysis_id"], SimpleNamespace(id=owner_id), SimpleNamespace())
+    assert unavailable["state"] == "unavailable"
+    assert unavailable["heat_risk"] is None

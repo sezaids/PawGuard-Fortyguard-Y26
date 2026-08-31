@@ -19,6 +19,15 @@ export type ActiveWalkUnavailableStatus = {
   disclaimer: string;
 };
 
+export type ActiveWalkAnalysis = {
+  state: "processing" | "completed" | "unavailable";
+  analysis_id?: string;
+  stage?: string;
+  message?: string;
+  result?: unknown;
+  unavailable_reason?: string;
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -65,4 +74,12 @@ export function isActiveWalkUnavailableStatus(value: unknown): value is ActiveWa
     typeof value.caution === "string" &&
     typeof value.disclaimer === "string"
   );
+}
+
+export function isActiveWalkProcessing(value: unknown): value is ActiveWalkAnalysis & { state: "processing"; analysis_id: string; message: string } {
+  return isRecord(value) && value.state === "processing" && typeof value.analysis_id === "string" && typeof value.message === "string";
+}
+
+export function isActiveWalkCompleted(value: unknown): value is ActiveWalkAnalysis & { state: "completed"; result: unknown } {
+  return isRecord(value) && value.state === "completed" && "result" in value;
 }

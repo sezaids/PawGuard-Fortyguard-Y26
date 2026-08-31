@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isActiveWalkStatus } from "./active-walk-status";
+import { isActiveWalkCompleted, isActiveWalkProcessing, isActiveWalkStatus } from "./active-walk-status";
 
 const completeStatus = {
   state: "available" as const,
@@ -39,5 +39,10 @@ describe("Active Walk status validation", () => {
     };
     expect(isActiveWalkUnavailableStatus(unavailable)).toBe(true);
     expect(isActiveWalkStatus(unavailable)).toBe(false);
+  });
+
+  it("recognizes a processing analysis ID and a completed wrapped result", () => {
+    expect(isActiveWalkProcessing({ state: "processing", analysis_id: "analysis-1", message: "Analyzing live heat conditions…" })).toBe(true);
+    expect(isActiveWalkCompleted({ state: "completed", analysis_id: "analysis-1", result: completeStatus })).toBe(true);
   });
 });
