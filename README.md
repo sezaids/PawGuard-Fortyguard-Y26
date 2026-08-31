@@ -16,8 +16,8 @@
 [Watch the demo](https://www.youtube.com/watch?v=OdeQ1cFPH60&t=36s)
 
 ## Temporary Crendentials
-Email: temp@temp.com\n
-Password: Temp@1234
+Email: test@pawguard.com <br>
+Password: Paw13579
 
 ## Problem
 
