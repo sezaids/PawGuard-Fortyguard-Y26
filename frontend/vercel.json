@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/backend/:path*",
+      "destination": "https://pawguard-fortyguard-y26-git-826586096262.europe-west1.run.app/:path*"
+    }
+  ]
+}
