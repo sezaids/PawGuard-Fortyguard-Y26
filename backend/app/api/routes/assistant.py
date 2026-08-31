@@ -12,7 +12,7 @@ from app.models.dog import Dog
 from app.schemas.assistant import AssistantChatRequest, AssistantChatResponse
 from app.services.current_conditions import current_environment
 from app.services.heat_risk import calculate_heat_risk
-from app.services.safety_assistant import ask_safety_assistant, base_context, profile_guidance_answer
+from app.services.safety_assistant import ask_safety_assistant, base_context, is_multi_dog_question, live_multi_dog_answer, profile_guidance_answer
 from app.services.surface_risk import calculate_surface_risk
 from app.services.walk_match import match_dogs_for_walk
 from app.api.routes.walk_planner import find_best_walk_time
@@ -27,6 +27,7 @@ def chat(payload: AssistantChatRequest, current_user: CurrentUser, db: DbSession
     started_at = perf_counter()
     dogs = list(db.scalars(select(Dog).where(Dog.owner_id == current_user.id).order_by(Dog.name)))
     context = base_context(dogs)
+    multi_dog_question = is_multi_dog_question(payload.message)
     timings = {"profile_context": round((perf_counter() - started_at) * 1000)}
     used_current_conditions = False
     context_note = "No current location was supplied, so the assistant used dog-profile context only."
@@ -38,6 +39,8 @@ def chat(payload: AssistantChatRequest, current_user: CurrentUser, db: DbSession
             context["current_environment"] = environment
             context["heat_risk_by_dog"] = [{"dog_name": dog.name, **calculate_heat_risk(dog, environment)} for dog in dogs]
             context["walk_match"] = match_dogs_for_walk(dogs, environment, payload.available_minutes, payload.surface, datetime.now(UTC).time()) if dogs else None
+            if multi_dog_question:
+                context["multi_dog_comparison"] = context["walk_match"]
             if selected and payload.surface:
                 context["selected_surface_risk"] = calculate_surface_risk(payload.surface, environment, datetime.now(UTC).time())
             if selected and any(term in payload.message.lower() for term in ("when", "safest", "best time", "forecast")):
@@ -54,7 +57,11 @@ def chat(payload: AssistantChatRequest, current_user: CurrentUser, db: DbSession
     elif not dogs:
         context["note"] = "The user has no dog profiles yet."
     ai_started_at = perf_counter()
-    answer = ask_safety_assistant(payload.message, context) if used_current_conditions else profile_guidance_answer(payload.message, dogs)
-    timings["openai"] = round((perf_counter() - ai_started_at) * 1000) if used_current_conditions else 0
+    if multi_dog_question and used_current_conditions:
+        # Deterministic Walk Match is the source of truth for pack questions.
+        answer = live_multi_dog_answer(context["walk_match"])
+    else:
+        answer = ask_safety_assistant(payload.message, context) if used_current_conditions else profile_guidance_answer(payload.message, dogs)
+    timings["openai"] = round((perf_counter() - ai_started_at) * 1000) if used_current_conditions and not multi_dog_question else 0
     timings["total"] = round((perf_counter() - started_at) * 1000)
     return {"answer": answer, "used_current_conditions": used_current_conditions, "context_note": context_note, "disclaimer": "PawGuard provides cautious planning guidance, not veterinary diagnosis. Stop activity and seek veterinary help for concerning symptoms.", "timings_ms": timings}
