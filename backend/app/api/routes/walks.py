@@ -16,7 +16,7 @@ router = APIRouter()
 DbSession = Annotated[Session, Depends(get_db)]
 
 
-@router.post("/", response_model=WalkResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=WalkResponse, status_code=status.HTTP_201_CREATED)
 def save_walk(payload: WalkCreate, current_user: CurrentUser, db: DbSession) -> Walk:
     dog = owned_dog(payload.dog_id, current_user.id, db)
     walk = Walk(owner_id=current_user.id, dog_id=dog.id, dog_name=dog.name, completed_at=payload.completed_at or datetime.now(UTC), **payload.model_dump(exclude={"dog_id", "completed_at"}))
@@ -24,7 +24,7 @@ def save_walk(payload: WalkCreate, current_user: CurrentUser, db: DbSession) -> 
     return walk
 
 
-@router.get("/", response_model=list[WalkResponse])
+@router.get("", response_model=list[WalkResponse])
 def list_walks(current_user: CurrentUser, db: DbSession) -> list[Walk]:
     return list(db.scalars(select(Walk).where(Walk.owner_id == current_user.id).order_by(Walk.completed_at.desc()).limit(100)))
 

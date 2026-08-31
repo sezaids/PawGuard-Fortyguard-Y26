@@ -9,7 +9,7 @@ const PUBLIC_PATHS = new Set(["/login", "/signup"]);
  * session check. The API remains the source of truth for the session.
  */
 export async function middleware(request: NextRequest) {
-  // `/backend/*` is the Vercel-to-Cloud-Run proxy. It must never be treated as
+  // `/backend/*` is the Vercel-to-Render proxy. It must never be treated as
   // a protected Next.js page: doing so redirects POST signup/login requests to
   // `/login`, which turns them into the observed 405 response.
   if (request.nextUrl.pathname === "/backend" || request.nextUrl.pathname.startsWith("/backend/")) {

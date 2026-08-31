@@ -21,12 +21,12 @@ def owned_dog(dog_id: UUID, owner_id: UUID, db: Session) -> Dog:
     return dog
 
 
-@router.get("/", response_model=list[DogResponse])
+@router.get("", response_model=list[DogResponse])
 def list_dogs(current_user: CurrentUser, db: DbSession) -> list[Dog]:
     return list(db.scalars(select(Dog).where(Dog.owner_id == current_user.id).order_by(Dog.name)))
 
 
-@router.post("/", response_model=DogResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=DogResponse, status_code=status.HTTP_201_CREATED)
 def create_dog(payload: DogCreate, current_user: CurrentUser, db: DbSession) -> Dog:
     dog = Dog(owner_id=current_user.id, **payload.model_dump())
     db.add(dog)

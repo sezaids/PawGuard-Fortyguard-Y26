@@ -4,7 +4,9 @@ export function apiBaseUrl(value: string | undefined, fallback = "http://localho
 }
 
 export function apiEndpoint(base: string, path: string): string {
-  return `${apiBaseUrl(base)}/api/v1/${path.replace(/^\/+/, "")}`;
+  // Vercel canonicalizes trailing slashes before forwarding external rewrites.
+  // Keep API collection URLs slashless so POST/OPTIONS never hit a redirect.
+  return `${apiBaseUrl(base)}/api/v1/${path.replace(/^\/+|\/+$/g, "")}`;
 }
 
 /** Resolve relative Vercel proxy paths for server middleware fetches. */
