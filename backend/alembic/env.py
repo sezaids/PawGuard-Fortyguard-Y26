@@ -5,10 +5,11 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import get_settings
 from app.db.base import Base
+from app.db.alembic_config import escape_configparser_value
 from app.models import Dog, User, Walk  # noqa: F401 - register metadata
 
 config = context.config
-config.set_main_option("sqlalchemy.url", get_settings().sqlalchemy_database_url)
+config.set_main_option("sqlalchemy.url", escape_configparser_value(get_settings().sqlalchemy_database_url))
 if config.config_file_name:
     fileConfig(config.config_file_name)
 
