@@ -15,10 +15,10 @@
 
 [Watch the demo](https://www.youtube.com/watch?v=Hbe9aCMw-BM)
 
-## Temporary Judge Credentials
+<mark>## Temporary Judge Credentials</mark>
 
-Email: `test@pawguard.com`<br>
-Password: `Paw13579`
+<mark>Email: `test@pawguard.com`<br></mark>
+<mark>Password: `Paw13579`</mark>
 
 ## Overview
 
