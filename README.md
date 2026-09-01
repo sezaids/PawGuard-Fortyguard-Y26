@@ -14,11 +14,18 @@
 ## Demo Video
 
 [Watch the demo](https://www.youtube.com/watch?v=Hbe9aCMw-BM)
-> [!WARNING]
-> ## Temporary Judge Credentials
 
-> Email: `test@pawguard.com`<br>
-> Password: `Paw13579`
+## Temporary Judge Credentials
+
+Email: `test@pawguard.com`<br>
+Password: `Paw13579`
+
+<svg width="400" height="110" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#FFFD01" rx="8"/>
+  <text x="15" y="30" font-family="sans-serif" font-size="16" font-weight="bold" fill="#000000">Temporary Judge Credentials</text>
+  <text x="15" y="65" font-family="sans-serif" font-size="14" fill="#000000">Email: test@pawguard.com</text>
+  <text x="15" y="90" font-family="sans-serif" font-size="14" fill="#000000">Password: Paw13579</text>
+</svg>
 
 ## Overview
 
