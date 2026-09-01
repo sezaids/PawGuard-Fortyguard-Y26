@@ -1,11 +1,11 @@
 # PawGuard
 
-> **Walk smart. Stay cool.** PawGuard helps dog owners plan more heat-aware walks by combining real FortyGuard environmental analysis with each dog’s saved profile and clear, cautious guidance.
+> **Walk smart. Stay cool.** PawGuard combines FortyGuard environmental analysis with each dog’s saved profile to provide explainable, heat-aware walk planning.
 
 [![Frontend](https://img.shields.io/badge/Frontend-Next.js%20%2B%20TypeScript-111827?logo=next.js)](frontend/)
 [![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi)](backend/)
 [![Database](https://img.shields.io/badge/Database-PostgreSQL-4169E1?logo=postgresql)](backend/alembic/)
-[![Heat data](https://img.shields.io/badge/Environmental%20data-FortyGuard-F97316)](https://fortyguard.com/)
+[![Environmental data](https://img.shields.io/badge/Environmental%20data-FortyGuard-F97316)](https://fortyguard.com/)
 
 ## Live Demo
 
@@ -15,144 +15,90 @@
 
 [Watch the demo](https://www.youtube.com/watch?v=Hbe9aCMw-BM)
 
-## Temporary Crendentials
-Email: test@pawguard.com <br>
-Password: Paw13579
+## Temporary Judge Credentials
 
-## Problem
+Email: `test@pawguard.com`<br>
+Password: `Paw13579`
 
-Warm-weather walks are not one-size-fits-all. A dog’s coat, size, age, fitness, activity level, and breathing anatomy can all matter, while outdoor conditions and surface exposure can change quickly. Dog owners need practical planning support without false precision or medical claims.
+## Overview
 
-## Solution
+PawGuard is a responsive dog heat-safety and smart walk-planning application. It combines protected multi-dog profiles, real completed FortyGuard activities, deterministic safety rules, route geometry, saved history, and a grounded AI Safety Assistant. The product favors transparent estimates and clear unavailable-data states over false certainty.
 
-PawGuard is a responsive web app that turns a selected location, real **FortyGuard** analysis, and a saved dog profile into explainable planning tools. It keeps environmental-provider credentials on the server, uses deterministic safety rules for its estimates, and clearly distinguishes live results from profile-only guidance.
+## Problem & Solution
+
+Heat exposure is not one-size-fits-all: age, size, coat, anatomy, activity, fitness, location, timing, and surface can all matter. PawGuard turns those inputs into a practical workflow—retrieve real environmental data server-side, combine it with a chosen dog through configurable deterministic rules, and present a cautious recommendation with its main reasons.
 
 ## Core Features
 
-| Area | What PawGuard provides |
+| Area | Capability |
 | --- | --- |
-| Personalized dog profiles | Private multi-dog profiles with heat-relevant characteristics and ownership protection. |
-| Heat & surface estimates | Explainable 0–100 heat estimate, estimated surface exposure, key contributors, and cautious recommendations. |
-| Smart planning | Forecast-window ranking, recommended duration, Walk Match, and a non-overlapping daily multi-dog schedule. |
-| Location-aware tools | Interactive FortyGuard heat map and heat-aware routes using real walking geometry. |
-| During-walk support | Active Walk timer, recorded risk summaries, reminders, Safety Center, and emergency-vet map search. |
-| Grounded AI assistance | An authenticated assistant grounded in PawGuard’s structured results, with profile-based fallback when live data is unavailable. |
-
-## Tech Stack
-
-| Layer | Technology |
-| --- | --- |
-| Web app | Next.js App Router, React, TypeScript, Tailwind CSS |
-| API | FastAPI, Pydantic, SQLAlchemy |
-| Database & migrations | PostgreSQL, Alembic, Psycopg 3 |
-| Authentication | Argon2 password hashing, signed JWT session in an HTTP-only cookie |
-| Environmental intelligence | FortyGuard Temperature API v1, called only by FastAPI |
-| Routes | OSRM foot-routing service, called only by the backend |
-| AI assistant | OpenAI Responses API, called only by the backend |
-| Production | Vercel frontend, Render web service, Supabase PostgreSQL |
-
-## Architecture
-
-```text
-                         ┌──────────────────────────┐
-                         │        Browser           │
-                         │  Next.js + Tailwind UI    │
-                         └────────────┬─────────────┘
-                                      │ HTTPS, same-origin cookie
-                                      ▼
-                    ┌─────────────────────────────────┐
-                    │             Vercel              │
-                    │  Next.js frontend + /backend/*  │
-                    │         reverse proxy           │
-                    └────────────┬────────────────────┘
-                                 │
-                                 ▼
-                    ┌─────────────────────────────────┐
-                    │          Render Free            │
-                    │          FastAPI API             │
-                    │ auth · risk rules · async polls │
-                    └───┬───────────────┬─────────────┘
-                        │               │
-              ┌─────────▼────────┐  ┌───▼──────────────────────┐
-              │ Supabase         │  │ Server-only integrations │
-              │ PostgreSQL       │  │ FortyGuard · OSRM · OpenAI│
-              │ users/dogs/walks │  │                          │
-              └──────────────────┘  └──────────────────────────┘
-```
-
-The browser calls `/backend/api/v1/...` in production. Vercel’s rewrite forwards that traffic to Render while the browser stays on the PawGuard origin, so the HTTP-only session cookie remains same-origin. Provider API keys, database credentials, and the signing secret never belong in frontend variables or browser code.
-
-## How PawGuard Works
-
-1. A user signs up, signs in, and creates one or more dog profiles.
-2. The user chooses **Use my location** where a current location is needed; latitude/longitude entry is available as a fallback.
-3. FastAPI requests the relevant FortyGuard activity and polls its status when the provider processes asynchronously.
-4. Once real completed data is available, PawGuard applies its deterministic profile, surface, duration, scheduling, or route rules.
-5. The UI shows results, clear processing/error/no-data states, and safety disclaimers rather than fabricated environmental values.
+| Accounts & profiles | Sign up/login/logout, HTTP-only sessions, owner-scoped multi-dog CRUD. |
+| Risk estimates | Explainable 0–100 heat estimate plus estimated surface risk for asphalt, concrete, grass, sand, and soil/dirt. |
+| Planning | Best Walk Time, duration recommendation, Walk Match, and a non-overlapping Daily Scheduler. |
+| Maps & routes | FortyGuard GeoJSON Heat Map and OSRM-backed heat-aware walking-route comparison. |
+| Walk support | Active Walk timer, reminders, saved sessions, History, Safety Center, and an emergency-vet map search. |
+| Assistant | Authenticated OpenAI assistant grounded in PawGuard’s structured outputs, with profile-only fallback when live data is unavailable. |
+| Demo seed | Opt-in, idempotent seed for one designated account’s five dogs and saved sample history. |
 
 ## FortyGuard Integration
 
-FortyGuard is central to PawGuard. The backend uses its documented v1 workflows for environmental parameters and heatmap activities. For asynchronous work, PawGuard creates an activity, retains its activity ID server-side, and polls the provider’s status endpoint until completion, failure, no-data, or a bounded timeout.
+FortyGuard Temperature API v1 is called **only by FastAPI**. The browser never receives its API key.
 
-- **Current conditions:** PawGuard obtains a completed current heatmap result, then requests supported environmental parameters for the selected point.
-- **Forecast planning:** Completed heatmap intervals within the available 12-hour horizon are ranked; missing intervals are never invented.
-- **Heat Map:** Completed FortyGuard GeoJSON tiles and available statistics are displayed on the interactive map.
-- **Route heat exposure:** PawGuard requests a heatmap for the candidate routes’ bounding area and calculates a relative exposure index only from usable returned tile values.
+- Backend requests environmental parameters and heatmaps.
+- Async activities follow create → activity ID → protected status polling → completed/failed/no-data state.
+- Completed forecast heatmap intervals power Walk Planner and Daily Scheduler; missing intervals are never invented.
+- Completed GeoJSON tiles/statistics power the Heat Map and relative route heat-exposure comparison.
+- Current-condition workflows support heat risk, surface risk, Walk Match, and Active Walk.
 
-Provider issues are surfaced as meaningful states, including missing configuration, unsupported request/location, quota or rate limits, processing, failure, and no data. PawGuard does not claim exact pavement or street-level temperatures.
+Provider delays, unsupported requests, quotas, failures, and no-data outcomes are rendered explicitly. PawGuard does not claim exact pavement or street-level temperatures.
 
-## Personalized Heat-Risk System
+## Tech Stack
 
-PawGuard returns an **estimated 0–100 score** with `Low`, `Moderate`, `High`, or `Very High` status, a walk-now recommendation, and the leading contributors. The calculation is deterministic and configurable in the backend—never generated by an LLM.
+| Layer | Technologies |
+| --- | --- |
+| Frontend | Next.js App Router, React, TypeScript, Tailwind CSS, PostCSS |
+| Backend | Python, FastAPI, Pydantic, Uvicorn, HTTPX |
+| Data | PostgreSQL, SQLAlchemy, Psycopg 3, Alembic |
+| Authentication | Argon2 (`pwdlib`), HS256 signed JWT, HTTP-only cookie |
+| Integrations | FortyGuard Temperature API v1, OSRM foot routing, OpenAI Responses API |
+| Hosting | Vercel frontend/proxy, Render API service, Supabase PostgreSQL |
+| Quality | Pytest, Vitest, TypeScript validation, Next.js production build |
 
-When present in completed environmental data, the rules consider apparent temperature, humidity, and solar exposure. Profile factors include age/date of birth, weight and body size, coat color and thickness, brachycephalic status, activity level, and fitness level. These are cautious product heuristics, not medical thresholds or a veterinary diagnosis.
+## Architecture
 
-## Paw / Surface Risk
+```mermaid
+flowchart LR
+  B[Browser\nNext.js UI] -->|/backend/api/v1| V[Vercel]
+  V -->|rewrite proxy| A[Render FastAPI]
+  A --> DB[(Supabase PostgreSQL)]
+  A --> FG[FortyGuard API v1]
+  A --> OSRM[OSRM Routing]
+  A --> OAI[OpenAI Responses API]
+  A --> R[Deterministic PawGuard rules]
+```
 
-For **asphalt, concrete, grass, sand, and soil/dirt**, PawGuard combines the selected surface with available environmental conditions and time of day. It returns an estimated risk level, reasons, leading factors, and safer alternatives. This feature explicitly labels its output as an estimate: FortyGuard does not provide an exact pavement-temperature reading.
+Production `NEXT_PUBLIC_API_URL` is `/backend`. Vercel rewrites `/backend/:path*` to Render, while Render owns provider credentials, database access, authentication, and risk-rule execution.
 
-## Walk Planner
+## Data Pipeline
 
-The Best Walk Time Finder starts an asynchronous forecast analysis for a selected dog and location. It ranks only completed FortyGuard intervals, optionally includes surface risk, and returns a best window, alternatives, estimated risk, and a cautious recommended duration. If no lower-risk window exists, it says so instead of forcing a plan.
-
-## Walk Match
-
-“I’m free now—who can I walk?” evaluates every dog owned by the signed-in user for 15, 30, 45, or 60 available minutes. A single completed current FortyGuard analysis is reused across the pack. Dogs are ranked by their existing personalized heat estimate, optional surface estimate, and duration guidance—not by breed alone.
-
-## Daily Walk Scheduler
-
-Users can supply up to eight available time blocks. PawGuard uses real forecast intervals in FortyGuard’s supported horizon to suggest non-overlapping walks, prioritizes more heat-sensitive dogs for safer available windows, and clearly marks any dog that cannot be safely scheduled.
-
-## Interactive Heat Map
-
-The Heat Map page requests a small-area FortyGuard GeoJSON heatmap around the selected location. It polls the same activity until terminal status, then visualizes the returned tiles and available statistics. Loading, provider error, unsupported/no-data, and bounded-timeout states are handled explicitly.
-
-## Heat-Aware Route Planner
-
-PawGuard can compare a start-to-destination walk or generate a short loop. It obtains real foot-route geometry from OSRM, requests FortyGuard heat tiles for the route area, and ranks routes with a transparent relative heat-exposure cost while keeping detours within configured limits. If usable heat tiles are unavailable, it falls back to normal walking-time ranking and labels heat optimization as unavailable.
-
-## Active Walk & History
-
-Active Walk combines a selected dog, selected surface, and current FortyGuard analysis to show elapsed time, a cautious duration limit, heat and surface estimates, and hydration/rest reminders. Users can explicitly save a completed walk; Walk History stores the dog snapshot, completion time, duration, surface, recorded risk summaries, and optional route metadata, then provides recent-walk summaries.
-
-## Safety Center
-
-The Safety Center provides cautious education about possible heat-stress warning signs, steps to take if a dog seems overheated, and urgent situations that need veterinary help. Its Emergency Vet Finder uses a user-triggered location lookup to open a nearby map search; it does not claim live clinic hours, capacity, or emergency availability.
-
-## AI Safety Assistant
-
-The authenticated **Ask PawGuard** assistant is available throughout the signed-in app. With a supplied location, it receives only the minimum structured PawGuard context needed to answer: saved dog traits, completed current environmental data, and deterministic heat/surface/Walk Match results where available. It cannot override PawGuard’s deterministic recommendations or duration limits.
-
-Without live conditions, it returns concise, dog-specific **Profile-based guidance only**—for example, noting relevant saved coat, size, fitness, or brachycephalic factors and practical precautions. It does not claim whether a walk is currently safe without live FortyGuard data. It never receives API keys, password hashes, account email, dog notes, or raw provider responses.
-
-## Authentication & Dog Profiles
-
-- Sign up, login, logout, and current-session endpoints
-- Argon2 password hashing and server-issued signed session cookies
-- HTTP-only cookie handling with secure-cookie support for HTTPS deployment
-- Protected routes and owner-scoped database queries
-- Add, view, edit, and delete multiple dog profiles
-- Profile validation for name, breed, age/date of birth, weight, body size, coat color, coat length, brachycephalic status, activity level, fitness level, and optional notes
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant UI as Next.js
+  participant API as FastAPI
+  participant FG as FortyGuard
+  participant Rules as Deterministic Rules
+  U->>UI: Select dog, location, optional surface
+  UI->>API: Protected request
+  API->>FG: Create environmental/heatmap activity
+  FG-->>API: Activity ID
+  UI->>API: Poll protected analysis endpoint
+  API->>FG: Poll status
+  FG-->>API: Completed data or terminal state
+  API->>Rules: Combine completed data and saved profile
+  Rules-->>API: Estimate, plan, or schedule
+  API-->>UI: Result or explicit processing/error/no-data state
+```
 
 ## Getting Started
 
@@ -160,76 +106,46 @@ Without live conditions, it returns concise, dog-specific **Profile-based guidan
 
 - Node.js 20.9+
 - Python 3.11+
-- Docker Desktop for the included local PostgreSQL service (or another PostgreSQL database)
+- pnpm
+- Docker Desktop for the included PostgreSQL service, or another PostgreSQL database
 
-### Environment Variables
-
-### Optional demo seed
-
-PawGuard never creates demo content during application startup. To initialize the
-single designated hackathon demo account after migrations, configure these
-values only in the deployment environment, then run the command once:
-
-```bash
-DEMO_SEED_ENABLED=true
-DEMO_ACCOUNT_EMAIL=demo-account-email@example.com
-DEMO_ACCOUNT_PASSWORD=use-a-strong-demo-password
-python -m app.db.seed_demo
-```
-
-The command is idempotent: it creates only missing Max, Bruno, Luna, Bella,
-and Coco profiles plus six clearly marked sample saved walks for that account.
-It does not call FortyGuard or create current conditions. Remove the three
-temporary seed variables after initialization; the demo account continues to
-work normally.
-
-Copy the template before starting. Use your own values; do not commit the resulting `.env` file.
+### Environment & Database
 
 ```bash
 cp .env.example .env
+docker compose up -d db
 ```
 
-On Windows PowerShell, use:
-
-```powershell
-Copy-Item .env.example .env
-```
+PowerShell: `Copy-Item .env.example .env`
 
 | Variable | Purpose |
 | --- | --- |
 | `DATABASE_URL` | Server-side PostgreSQL connection string. |
-| `SECRET_KEY` | High-entropy server-side signing key. |
-| `CORS_ORIGINS` | Comma-separated browser origins permitted to call FastAPI. |
-| `COOKIE_SECURE` | `false` for local HTTP; `true` for deployed HTTPS. |
-| `FORTYGUARD_API_KEY` | Server-only FortyGuard API credential. |
-| `OPENAI_API_KEY` | Server-only credential for the AI Safety Assistant. |
-| `OPENAI_MODEL` | OpenAI model name used by the assistant. |
-| `NEXT_PUBLIC_API_URL` | Frontend API base: `http://localhost:8000` locally, `/backend` in Vercel production. |
+| `SECRET_KEY` | JWT signing secret. |
+| `CORS_ORIGINS` | Comma-separated allowed browser origins. |
+| `COOKIE_SECURE` | `false` locally; `true` over production HTTPS. |
+| `FORTYGUARD_API_KEY` | Server-only FortyGuard credential. |
+| `OPENAI_API_KEY` | Server-only assistant credential. |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8000` locally; `/backend` on Vercel. |
 
-The checked-in template contains placeholders only. Keep `FORTYGUARD_API_KEY`, `OPENAI_API_KEY`, `DATABASE_URL`, and `SECRET_KEY` out of Git and out of `NEXT_PUBLIC_*` variables.
+The checked-in template contains placeholders only. Never commit `.env`, API keys, database URLs, or `SECRET_KEY` values.
 
-### Run PostgreSQL Locally
-
-```bash
-docker compose up -d db
-```
-
-### Run the Backend
+### Backend
 
 ```bash
 cd backend
 python -m venv .venv
-# Windows PowerShell
+# PowerShell
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 alembic upgrade head
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-API health check: [http://localhost:8000/api/v1/health/](http://localhost:8000/api/v1/health/)
-Interactive API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+- Health: [http://localhost:8000/api/v1/health/](http://localhost:8000/api/v1/health/)
+- Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-### Run the Frontend
+### Frontend
 
 ```bash
 cd frontend
@@ -239,7 +155,63 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### Test and Build
+### Optional Demo Seed
+
+The seed command is never run during web-app startup. It creates missing data only for `DEMO_ACCOUNT_EMAIL`, does not call FortyGuard, and does not create live conditions.
+
+```bash
+cd backend
+DEMO_SEED_ENABLED=true \
+DEMO_ACCOUNT_EMAIL=demo@example.com \
+DEMO_ACCOUNT_PASSWORD=choose-a-strong-password \
+python -m app.db.seed_demo
+```
+
+It creates Max, Bruno, Luna, Bella, and Coco plus six saved historical sample walks. Re-running it does not create duplicates.
+
+## Deployment Architecture
+
+| Service | Role |
+| --- | --- |
+| Vercel | Next.js frontend and `/backend/*` rewrite from `frontend/vercel.json`. |
+| Render | FastAPI from `backend`; startup runs `alembic upgrade head` before Uvicorn. |
+| Supabase | Production PostgreSQL through Render’s `DATABASE_URL`. |
+
+Configure Vercel with `NEXT_PUBLIC_API_URL=/backend`. Configure Render with `DATABASE_URL`, `SECRET_KEY`, `FORTYGUARD_API_KEY`, `OPENAI_API_KEY`, `COOKIE_SECURE=true`, and the Vercel production URL in `CORS_ORIGINS`.
+
+## Security & Privacy
+
+- Passwords use Argon2; signed sessions are stored in HTTP-only cookies.
+- Protected routes use owner-scoped queries for dogs, walks, and analyses.
+- Provider keys, database credentials, and signing secrets remain server-side.
+- The assistant receives minimized structured context—not password hashes, API keys, account email, dog notes, or raw provider payloads.
+
+## Impact
+
+PawGuard makes heat-aware dog walking more actionable by joining environmental analysis with an individual dog, selected surface, available time, and route. It prioritizes explainability, privacy, and honest uncertainty.
+
+## Limitations & Safety
+
+PawGuard is a planning and awareness tool—not veterinary diagnosis, medical advice, emergency dispatch, or a guarantee of safety. Surface risk is an estimate; FortyGuard does not provide exact pavement temperature. Live features depend on provider coverage and completed activities. Stop activity and seek veterinary help promptly for concerning symptoms.
+
+## Project Structure
+
+```text
+PawGuard/
+├── frontend/                 # Next.js pages, components, middleware, tests
+├── backend/
+│   ├── app/api/routes/       # FastAPI endpoints
+│   ├── app/services/         # FortyGuard, risk, route, assistant services
+│   ├── app/models/           # User, Dog, Walk models
+│   ├── app/core/             # Settings, security, deterministic rules
+│   ├── app/db/seed_demo.py   # Opt-in demo seeder
+│   ├── alembic/              # Migrations
+│   └── tests/                # Backend tests
+├── docker-compose.yml        # Local PostgreSQL 16
+└── render.yaml               # Render configuration
+```
+
+## Testing
 
 ```bash
 # backend/
@@ -252,25 +224,4 @@ pnpm exec tsc --noEmit
 pnpm build
 ```
 
-## Deployment Architecture
-
-PawGuard’s checked-in production configuration uses:
-
-| Service | Deployment role |
-| --- | --- |
-| **Vercel** | Hosts the Next.js app with `frontend` as the project root. `frontend/vercel.json` rewrites `/backend/:path*` to the Render API. |
-| **Render Free** | Runs the FastAPI web service from `backend`. Its start command runs `alembic upgrade head` and only starts Uvicorn if migration succeeds. |
-| **Supabase** | Supplies the production PostgreSQL database through `DATABASE_URL`. Standard Supabase PostgreSQL URLs are normalized to the installed Psycopg driver; percent-encoded credentials are safely escaped for Alembic. |
-
-For production:
-
-1. Set Vercel Production `NEXT_PUBLIC_API_URL=/backend` and deploy from the `frontend` root directory.
-2. Create the Render web service from [`render.yaml`](render.yaml), then set the required server-side secrets in Render.
-3. Set Render `CORS_ORIGINS=https://paw-guard-fortyguard-y26.vercel.app` and keep `COOKIE_SECURE=true`.
-4. Supply the Supabase connection string only to Render as `DATABASE_URL`.
-
-## Why PawGuard Matters
-
-PawGuard makes heat-aware walking more actionable: it joins hyperlocal environmental analysis from **FortyGuard** with the realities of an individual dog, surface choice, available time, and walking route. Its design favors explainability, privacy, cautious wording, and honest unavailable-data states over false certainty.
-
-> PawGuard is a planning and awareness tool, not veterinary diagnosis, medical advice, emergency dispatch, or a guarantee of safety. Stop activity and seek veterinary help promptly for concerning symptoms.
+Regression coverage includes deterministic heat/surface rules, forecasts and async analyses, Walk Match, scheduling, Active Walk, route heat, assistant behavior, API URL/proxy helpers, and deployment configuration.
