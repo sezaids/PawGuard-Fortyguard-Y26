@@ -14,11 +14,11 @@
 ## Demo Video
 
 [Watch the demo](https://www.youtube.com/watch?v=Hbe9aCMw-BM)
+> [!WARNING]
+> ## Temporary Judge Credentials
 
-<mark>## Temporary Judge Credentials</mark>
-
-<mark>Email: `test@pawguard.com`<br></mark>
-<mark>Password: `Paw13579`</mark>
+> Email: `test@pawguard.com`<br>
+> Password: `Paw13579`
 
 ## Overview
 
